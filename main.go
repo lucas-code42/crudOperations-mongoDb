@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -58,7 +60,51 @@ func insertMany(client *mongo.Client, data []interface{}) error {
 	return nil
 }
 
+func queryFilter(client *mongo.Client) error {
+	//                 key,               value
+	filter := bson.D{{"title", "In Memory of Memory"}}
+	coll := client.Database(defaultDb).Collection(defaultCollection)
+	cursor, err := coll.Find(ctx, filter)
+	if err != nil {
+		return err
+	}
+	var results []Book
+	if err = cursor.All(ctx, &results); err != nil {
+		return err
+	}
+	for _, result := range results {
+		res, _ := json.Marshal(result)
+		fmt.Println(string(res))
+	}
+	return nil
+}
+
+func updateData(client *mongo.Client) error {
+	coll := client.Database(defaultDb).Collection(defaultCollection)
+	filter := bson.D{{"title", "In Memory of Memory"}}
+	update := bson.D{{"$set", bson.D{{"Title", "Harry Potter"}}}}
+	result, err := coll.UpdateOne(ctx, filter, update)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Documents matched: %v\n", result.MatchedCount)
+	fmt.Printf("Documents updated: %v\n", result.ModifiedCount)
+	return nil
+}
+
+func deleteByFilter(client *mongo.Client) error {
+	coll := client.Database(defaultDb).Collection(defaultCollection)
+	filter := bson.D{{"title", "In Memory of Memory"}}
+	result, err := coll.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Number of documents deleted: %d\n", result.DeletedCount)
+	return nil
+}
+
 func main() {
+	// based on https://www.mongodb.com/docs/drivers/go/current/fundamentals/crud/
 	mongoClient, err := connect()
 	if err != nil {
 		log.Panicf(
@@ -70,6 +116,8 @@ func main() {
 				"[*] Troubles to disconnect dataBase.\n%v", err.Error())
 		}
 	}()
+
+	// create
 	if err = insertRecord(mongoClient, Book{Title: "Atonement", Author: "Ian McEwan"}); err != nil {
 		log.Panicf(
 			"[*] Something got wrong check the 'insertRecord' func.\n%v", err.Error())
@@ -83,5 +131,23 @@ func main() {
 	if err = insertMany(mongoClient, docs); err != nil {
 		log.Panicf(
 			"[*] Something got wrong check the 'insertMany' func.\n%v", err.Error())
+	}
+
+	// read
+	if err = queryFilter(mongoClient); err != nil {
+		log.Panicf(
+			"[*] Something got wrong check the 'queryFilter' func.\n%v", err.Error())
+	}
+
+	// update
+	if err = updateData(mongoClient); err != nil {
+		log.Panicf(
+			"[*] Something got wrong check the 'updateData' func.\n%v", err.Error())
+	}
+
+	// delete
+	if err = deleteByFilter(mongoClient); err != nil {
+		log.Panicf(
+			"[*] Something got wrong check the 'deleteByFilter' func.\n%v", err.Error())
 	}
 }
