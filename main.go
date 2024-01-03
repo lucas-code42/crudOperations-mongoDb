@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,7 +18,7 @@ type Book struct {
 }
 
 const (
-	uri               = "mongodb://root:example@localhost:27017/"
+	uri               = "mongodb://root:example@mongo:27017/"
 	defaultDb         = "db"
 	defaultCollection = "books"
 )
@@ -103,7 +104,9 @@ func deleteByFilter(client *mongo.Client) error {
 	return nil
 }
 
-func main() {
+func greet(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("here")
+
 	// based on https://www.mongodb.com/docs/drivers/go/current/fundamentals/crud/
 	mongoClient, err := connect()
 	if err != nil {
@@ -150,4 +153,13 @@ func main() {
 		log.Panicf(
 			"[*] Something got wrong check the 'deleteByFilter' func.\n%v", err.Error())
 	}
+
+	w.Write([]byte("Done"))
+
+}
+
+func main() {
+	fmt.Println("init")
+	http.HandleFunc("/", greet)
+	http.ListenAndServe(":8080", nil)
 }
