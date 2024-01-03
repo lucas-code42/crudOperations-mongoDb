@@ -1,7 +1,6 @@
 version: '3.1'
 
 services:
-
   mongo:
     image: mongo
     container_name: mongo-api
@@ -11,3 +10,18 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+    networks:
+      - my_net
+
+  api:
+    build:
+      context: .
+    ports:
+      - 8080:8080
+    depends_on:
+      - mongo
+    networks:
+      - my_net
+
+networks:
+  my_net:
